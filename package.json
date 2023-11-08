@@ -1,0 +1,27 @@
+{
+  "name": "@abi-software/sparc-annotation",
+  "version": "0.0.1",
+  "description": "Web annotation service for the SPARC portal",
+  "repository": "https://github.com/AnatomicMaps/sparc-annotation.git",
+  "author": "David Brooks",
+  "license": "MIT",
+  "keywords": [],
+  "main": "dist/index.js",
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "dev": "tsc --watch",
+    "docs": "typedoc",
+    "prepublish": "tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "@mxssfd/typedoc-theme": "^1.1.3",
+    "typedoc": "^0.25.3",
+    "typescript": "^5.2.2"
+  },
+  "dependencies": {
+    "rdflib": "^2.2.32"
+  }
+}
