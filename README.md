@@ -21,6 +21,6 @@ $ npm install
 Documentation:
 
 ```
-$ npm run typedoc
+$ npm run docs
 $ open docs/index.html
 ```
