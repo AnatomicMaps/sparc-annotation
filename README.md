@@ -8,7 +8,7 @@
 Installation:
 
 ```
-$ npm install @abi-software/sparc-annotation@0.0.1
+$ npm install @abi-software/sparc-annotation@0.0.2
 ```
 
 Development:
