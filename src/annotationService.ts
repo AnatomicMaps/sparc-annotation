@@ -18,17 +18,26 @@ limitations under the License.
 
 ******************************************************************************/
 
+
 /**
  * Annotation about an item in a resource.
  */
-export interface AnnotationData
+export interface Annotation
 {
-    created: string    // timestamp...
-    creator: UserData
     resource: string
     item: string
-    evidence: string[]
+    evidence: URL[]
     comment: string
+}
+
+/**
+ * Full annotation about an item in a resource.
+ */
+export interface AnnotationData extends Annotation
+{
+    id: URL
+    created: string    // timestamp...
+    creator: UserData
 }
 
 //==============================================================================
@@ -161,13 +170,14 @@ export class AnnotationService
      * @param  itemId      The item's identifier within the resource
      * @param  annotation  Annotation about the feature
      */
-    addAnnotation(resourceId: string, ItemId: string, annotation: AnnotationData)
+    addAnnotation(resourceId: string, ItemId: string, annotation: Annotation): AnnotationData|null
     {
         if (this.#currentUser && this.#currentUser.canUpdate) {
             // set annotation provenance from this.#currentUser
             // set timestamp
 
         }
+        return null;
     }
 
     async #request(endpoint: string, method: 'GET'|'POST'='GET', parameters: Record<string, string>={})
