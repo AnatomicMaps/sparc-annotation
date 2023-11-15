@@ -18,11 +18,14 @@ limitations under the License.
 
 ******************************************************************************/
 
+import Cookies from 'js-cookie'
+
+//==============================================================================
 
 /**
  * Annotation about an item in a resource.
  */
-export interface Annotation
+export interface UserAnnotation
 {
     resource: string
     item: string
@@ -30,19 +33,21 @@ export interface Annotation
     comment: string
 }
 
-/**
- * Full annotation about an item in a resource.
- */
-export interface AnnotationData extends Annotation
+
+interface AnnotationRequest extends UserAnnotation
 {
-    id: URL
     created: string    // timestamp...
     creator: UserData
 }
 
-//==============================================================================
+/**
+ * Full annotation about an item in a resource.
+ */
+export interface Annotation extends AnnotationRequest
+{
+    id: URL
+}
 
-const SERVER_TIMEOUT = 10000  //  10 seconds
 
 //==============================================================================
 
@@ -65,15 +70,7 @@ export interface UserData {
 
 //==============================================================================
 
-function getCookie(name: string): string
-{
-    const value = `; ${document.cookie}`
-    const parts = value.split(`; ${name}=`)
-    if (parts.length === 2) {
-        return parts.pop()!.split(';').shift() || ''
-    }
-    return ''
-}
+const SERVER_TIMEOUT = 100000  //  100 seconds
 
 //==============================================================================
 
@@ -129,12 +126,12 @@ export class AnnotationService
         this.#currentError = null
         this.#currentUser = null
         const userData = await this.#request('authenticate')
-        if ('error' in userData) {
-            this.#currentError = userData
-        } else if ('token' in userData) {
-            this.#currentUser = userData
+        if (!('error' in userData)) {
+            Cookies.set('annotation-key', userData.session, { secure: true, expires: 1 })
+            this.#currentUser = userData.data
             return Promise.resolve(this.#currentUser!)
         }
+        Cookies.remove('annotation-key')
         return Promise.resolve(this.#currentError!)
     }
 
@@ -142,46 +139,87 @@ export class AnnotationService
      * Get identifiers of all annotated items in a resource.
      *
      * @param  resourceId  The resource's identifier
-     * @return             Identifiers of annotated items.
+     * @return             A Promise resolving to either a list of
+     *                     identifiers of annotated items or a reason
+     *                     why identifiers couldn't be retrieved.
      */
-    annotatedItemIds(resourceId: string): string[]
-    //============================================
+    async annotatedItemIds(resourceId: string): Promise<string[]|ErrorResult>
+    //=======================================================================
     {
-        return []
+        const itemIds = await this.#request(`items/${resourceId}`)
+        if (!('error' in itemIds)) {
+            return Promise.resolve(itemIds)
+        }
+        return Promise.resolve(this.#currentError!)
     }
 
     /**
      * Get all annotations about a specific item in a resource.
      *
-     * @param   resourceId  The resource's identifier
-     * @param   itemId      The item's identifier within the resource
-     * @return              All annotations about the item.
+     * @param  resourceId  The resource's identifier
+     * @param  itemId      The item's identifier within the resource
+     * @return             A Promise resolving to either a list of
+     *                     annotations about the item or a reason
+     *                     why annotations couldn't be retrieved.
      */
-    annotations(resourceId: string, ItemId: string): AnnotationData[]
-    //===============================================================
+    async itemAnnotations(resourceId: string, ItemId: string): Promise<Annotation[]|ErrorResult>
+    //==========================================================================================
     {
-        return []
+        const annotations = await this.#request(`annotations/${resourceId}/${ItemId}`)
+        if (!('error' in annotations)) {
+            return Promise.resolve(annotations)
+        }
+        return Promise.resolve(this.#currentError!)
+    }
+
+    /**
+     * Get details of a specific annotation.
+     *
+     * @param  annotationId  The annotation's URI
+     * @return               A Promise resolving to either an annotation
+     *                       with the given URI or a reason why the
+     *                       annotation couldn't be retrieved.
+     */
+    async annotation(annotationId: URL): Promise<Annotation|ErrorResult>
+    //==================================================================
+    {
+        const annotation = await this.#request(`annotation/${annotationId}`)
+        if (!('error' in annotation)) {
+            return Promise.resolve(annotation)
+        }
+        return Promise.resolve(this.#currentError!)
     }
 
     /**
      * Add an annotation about a specific item in a resource.
      *
-     * @param  resourceId  The resource's identifier
-     * @param  itemId      The item's identifier within the resource
-     * @param  annotation  Annotation about the feature
+     * @param   annotation  Annotation about the feature
+     * @return              A Promise resolving to either the resulting
+     *                      full annotation or a reason why the
+     *                      annotation couldn't be added
      */
-    addAnnotation(resourceId: string, ItemId: string, annotation: Annotation): AnnotationData|null
+    async addAnnotation(userAnnotation: UserAnnotation): Promise<Annotation|ErrorResult>
+    //==================================================================================
     {
         if (this.#currentUser && this.#currentUser.canUpdate) {
-            // set annotation provenance from this.#currentUser
-            // set timestamp
-
+            const annotationRequest: AnnotationRequest = Object.assign({
+                creator: this.#currentUser,
+                created: (new Date()).toISOString()
+            }, userAnnotation)
+            const annotationResponse = await this.#request(`annotation/`, 'POST', {
+                data: annotationRequest})
+            if (!('error' in annotationResponse)) {
+                return Promise.resolve(annotationResponse)
+            }
+            this.#currentError = annotationResponse
+        } else {
+            this.#currentError = { error: 'user cannot add annotation' }
         }
-        return null;
+        return Promise.resolve(this.#currentError!)
     }
 
-    async #request(endpoint: string, method: 'GET'|'POST'='GET', parameters: Record<string, string>={})
-    //=================================================================================================
+    async #request(endpoint: string, method: 'GET'|'POST'='GET', parameters={})
+    //=========================================================================
     {
         let noResponse = true
         const abortController = new AbortController()
@@ -199,20 +237,25 @@ export class AnnotationService
             signal: abortController.signal
         }
         let url = `${this.#serverEndpoint}/${endpoint}`
-        const userApiKey = getCookie('user-token')
+        const userApiKey = <string>Cookies.get('user-token') || ''
+        const sessionKey = <string>Cookies.get('annotation-key') || ''
         if (method === 'GET') {
             const params = []
             for (const [key, value] of Object.entries(parameters)) {
                 params.push(`${key}=${encodeURIComponent(JSON.stringify(value))}`)
             }
             params.push(`key=${encodeURIComponent(userApiKey)}`)
+            params.push(`session=${encodeURIComponent(sessionKey)}`)
             url += '?' + params.join('&')
             options['headers'] = {
                 "Accept": "application/json; charset=utf-8",
                 "Cache-Control": "no-store"
             }
         } else if (method === 'POST') {
-            const params = Object.assign({key: userApiKey}, parameters)
+            const params = Object.assign({
+                key: userApiKey,
+                session: sessionKey
+            }, parameters)
             options['body'] = JSON.stringify(params)
             options['headers'] = {
                 "Accept": "application/json; charset=utf-8",
@@ -225,7 +268,8 @@ export class AnnotationService
         if (response.ok) {
             return Promise.resolve(await response.json())
         } else {
-            return Promise.resolve({error: `${response.status} ${response.statusText}`})
+            this.#currentError = {error: `${response.status} ${response.statusText}`}
+            return Promise.resolve(this.#currentError)
         }
     }
 }
