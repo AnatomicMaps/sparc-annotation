@@ -146,7 +146,9 @@ export class AnnotationService
     async annotatedItemIds(resourceId: string): Promise<string[]|ErrorResult>
     //=======================================================================
     {
-        const itemIds = await this.#request(`items/${resourceId}`)
+        const itemIds = await this.#request('items/', 'GET', {
+            resource: resourceId
+        })
         if (!('error' in itemIds)) {
             return Promise.resolve(itemIds)
         }
@@ -165,7 +167,10 @@ export class AnnotationService
     async itemAnnotations(resourceId: string, ItemId: string): Promise<Annotation[]|ErrorResult>
     //==========================================================================================
     {
-        const annotations = await this.#request(`annotations/${resourceId}/${ItemId}`)
+        const annotations = await this.#request('annotations/', 'GET', {
+            resource: resourceId,
+            item: ItemId
+        })
         if (!('error' in annotations)) {
             return Promise.resolve(annotations)
         }
@@ -183,7 +188,9 @@ export class AnnotationService
     async annotation(annotationId: URL): Promise<Annotation|ErrorResult>
     //==================================================================
     {
-        const annotation = await this.#request(`annotation/${annotationId}`)
+        const annotation = await this.#request('annotation/', 'GET', {
+            annotation: annotationId
+        })
         if (!('error' in annotation)) {
             return Promise.resolve(annotation)
         }
