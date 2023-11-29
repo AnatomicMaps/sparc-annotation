@@ -59,6 +59,13 @@ export interface ErrorResult {
 }
 
 /**
+ * Information about an successful result.
+ */
+export interface SuccessResult {
+    success: string
+}
+
+/**
  * Information about a logged in user.
  */
 export interface UserData {
@@ -134,6 +141,23 @@ export class AnnotationService
         Cookies.remove('annotation-key')
         return Promise.resolve(this.#currentError!)
     }
+
+    /**
+     * Unauthenticate with the annotation service.
+     *
+     * @return  A Promise with data about the call.
+     */
+    async unauthenticate(): Promise<SuccessResult|ErrorResult>
+    //========================================================
+    {
+        this.#currentError = null
+        this.#currentUser = null
+        const resultData = await this.#request('unauthenticate')
+        if ('success' in resultData) {
+            return Promise.resolve(resultData)
+        }
+        return Promise.resolve(this.#currentError!)
+     }
 
     /**
      * Get identifiers of all annotated items in a resource.
