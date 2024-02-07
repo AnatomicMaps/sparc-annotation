@@ -23,6 +23,19 @@ import Cookies from 'js-cookie'
 //==============================================================================
 
 /**
+ * A flatmap feature.
+ */
+export interface MapFeature
+{
+    id: string
+    geometry: {
+        type: string
+        coordinates: any[]
+    }
+    properties: Record<any, any>
+}
+
+/**
  * Annotation about an item in a resource.
  */
 export interface UserAnnotation
@@ -31,6 +44,7 @@ export interface UserAnnotation
     item: string
     evidence: URL[]
     comment: string
+    feature?: MapFeature
 }
 
 
@@ -175,6 +189,26 @@ export class AnnotationService
         })
         if (!('error' in itemIds)) {
             return Promise.resolve(itemIds)
+        }
+        return Promise.resolve(this.#currentError!)
+    }
+
+    /**
+     * Get all annotated features drawn on a resource.
+     *
+     * @param  resourceId  The resource's identifier
+     * @return             A Promise resolving to either a list of annotated
+     *                     features drawn on the resource or a reason why
+     *                     features couldn't be retrieved.
+     */
+    async drawnFeatures(resourceId: string): Promise<MapFeature[]|ErrorResult>
+    //========================================================================
+    {
+        const features = await this.#request('features/', 'GET', {
+            resource: resourceId
+        })
+        if (!('error' in features)) {
+            return Promise.resolve(features)
         }
         return Promise.resolve(this.#currentError!)
     }
