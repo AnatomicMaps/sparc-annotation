@@ -214,6 +214,30 @@ export class AnnotationService
     }
 
     /**
+     * Get all annotated features drawn on a resource by current logged-in SPARC user.
+     *
+     * @param  resourceId  The resource's identifier
+     * @return             A Promise resolving to either a list of annotated
+     *                     features drawn on the resource or a reason why
+     *                     features couldn't be retrieved.
+     */
+    async userDrawnFeatures(resourceId: string, participateStatus: boolean): Promise<MapFeature[]|ErrorResult>
+    //========================================================================================================
+    {
+        const features = await this.#request('features/participation', 'GET', {
+            resource: resourceId,
+            participation: {
+                user: this.#currentUser,
+                status: participateStatus
+            }
+        })
+        if (!('error' in features)) {
+            return Promise.resolve(features)
+        }
+        return Promise.resolve(this.#currentError!)
+    }
+
+    /**
      * Get all annotations about a specific item in a resource.
      *
      * @param  resourceId  The resource's identifier
