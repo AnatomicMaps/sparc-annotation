@@ -1,14 +1,10 @@
 # An annotation interface for the SPARC portal
 
 
-> [!WARNING]
-> This package is under active development and **MUST NOT** be seen as stable.
-
-
 Installation:
 
 ```
-$ npm install @abi-software/sparc-annotation@0.1.1
+$ npm install @abi-software/sparc-annotation@0.2.0
 ```
 
 Development:
