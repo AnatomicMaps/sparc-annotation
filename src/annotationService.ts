@@ -138,15 +138,16 @@ export class AnnotationService
     /**
      * Authenticate the logged-in SPARC user.
      *
+     * @param  userApiKey  The Api token of the logged-in Pennsieve user
      * @return  A Promise resolving to either data about a valid user
      *          or a reason why the user is invalid.
      */
-    async authenticate(): Promise<UserData|ErrorResult>
-    //=================================================
+    async authenticate(userApiKey: string): Promise<UserData|ErrorResult>
+    //===================================================================
     {
         this.#currentError = null
         this.#currentUser = null
-        const userData = await this.#request('authenticate')
+        const userData = await this.#request(userApiKey, 'authenticate')
         if (!('error' in userData)) {
             Cookies.set('annotation-key', userData.session, { secure: true, expires: 1 })
             this.#currentUser = userData.data
@@ -159,14 +160,15 @@ export class AnnotationService
     /**
      * Unauthenticate with the annotation service.
      *
+     * @param  userApiKey  The Api token of the logged-in Pennsieve user
      * @return  A Promise with data about the call.
      */
-    async unauthenticate(): Promise<SuccessResult|ErrorResult>
-    //========================================================
+    async unauthenticate(userApiKey: string): Promise<SuccessResult|ErrorResult>
+    //==========================================================================
     {
         this.#currentError = null
         this.#currentUser = null
-        const resultData = await this.#request('unauthenticate')
+        const resultData = await this.#request(userApiKey, 'unauthenticate')
         if ('success' in resultData) {
             return Promise.resolve(resultData)
         }
@@ -176,15 +178,16 @@ export class AnnotationService
     /**
      * Get identifiers of all annotated items in a resource.
      *
+     * @param  userApiKey  The Api token of the logged-in Pennsieve user
      * @param  resourceId  The resource's identifier
      * @return             A Promise resolving to either a list of
      *                     identifiers of annotated items or a reason
      *                     why identifiers couldn't be retrieved.
      */
-    async annotatedItemIds(resourceId: string): Promise<string[]|ErrorResult>
-    //=======================================================================
+    async annotatedItemIds(userApiKey: string, resourceId: string): Promise<string[]|ErrorResult>
+    //===========================================================================================
     {
-        const itemIds = await this.#request('items/', 'GET', {
+        const itemIds = await this.#request(userApiKey, 'items/', 'GET', {
             resource: resourceId
         })
         if (!('error' in itemIds)) {
@@ -196,15 +199,16 @@ export class AnnotationService
     /**
      * Get all annotated features drawn on a resource.
      *
+     * @param  userApiKey  The Api token of the logged-in Pennsieve user
      * @param  resourceId  The resource's identifier
      * @return             A Promise resolving to either a list of annotated
      *                     features drawn on the resource or a reason why
      *                     features couldn't be retrieved.
      */
-    async drawnFeatures(resourceId: string): Promise<MapFeature[]|ErrorResult>
-    //========================================================================
+    async drawnFeatures(userApiKey: string, resourceId: string): Promise<MapFeature[]|ErrorResult>
+    //============================================================================================
     {
-        const features = await this.#request('features/', 'GET', {
+        const features = await this.#request(userApiKey, 'features/', 'GET', {
             resource: resourceId
         })
         if (!('error' in features)) {
@@ -216,16 +220,17 @@ export class AnnotationService
     /**
      * Get all annotations about a specific item in a resource.
      *
+     * @param  userApiKey  The Api token of the logged-in Pennsieve user
      * @param  resourceId  The resource's identifier
      * @param  itemId      The item's identifier within the resource
      * @return             A Promise resolving to either a list of
      *                     annotations about the item or a reason
      *                     why annotations couldn't be retrieved.
      */
-    async itemAnnotations(resourceId: string, ItemId: string): Promise<Annotation[]|ErrorResult>
-    //==========================================================================================
+    async itemAnnotations(userApiKey: string, resourceId: string, ItemId: string): Promise<Annotation[]|ErrorResult>
+    //==============================================================================================================
     {
-        const annotations = await this.#request('annotations/', 'GET', {
+        const annotations = await this.#request(userApiKey, 'annotations/', 'GET', {
             resource: resourceId,
             item: ItemId
         })
@@ -238,15 +243,16 @@ export class AnnotationService
     /**
      * Get details of a specific annotation.
      *
+     * @param  userApiKey  The Api token of the logged-in Pennsieve user
      * @param  annotationId  The annotation's URI
      * @return               A Promise resolving to either an annotation
      *                       with the given URI or a reason why the
      *                       annotation couldn't be retrieved.
      */
-    async annotation(annotationId: URL): Promise<Annotation|ErrorResult>
-    //==================================================================
+    async annotation(userApiKey: string, annotationId: URL): Promise<Annotation|ErrorResult>
+    //======================================================================================
     {
-        const annotation = await this.#request('annotation/', 'GET', {
+        const annotation = await this.#request(userApiKey, 'annotation/', 'GET', {
             annotation: annotationId
         })
         if (!('error' in annotation)) {
@@ -258,20 +264,21 @@ export class AnnotationService
     /**
      * Add an annotation about a specific item in a resource.
      *
+     * @param  userApiKey  The Api token of the logged-in Pennsieve user
      * @param   annotation  Annotation about the feature
      * @return              A Promise resolving to either the resulting
      *                      full annotation or a reason why the
      *                      annotation couldn't be added
      */
-    async addAnnotation(userAnnotation: UserAnnotation): Promise<Annotation|ErrorResult>
-    //==================================================================================
+    async addAnnotation(userApiKey: string, userAnnotation: UserAnnotation): Promise<Annotation|ErrorResult>
+    //======================================================================================================
     {
         if (this.#currentUser && this.#currentUser.canUpdate) {
             const annotationRequest: AnnotationRequest = Object.assign({
                 creator: this.#currentUser,
                 created: (new Date()).toISOString()
             }, userAnnotation)
-            const annotationResponse = await this.#request(`annotation/`, 'POST', {
+            const annotationResponse = await this.#request(userApiKey, `annotation/`, 'POST', {
                 data: annotationRequest})
             if (!('error' in annotationResponse)) {
                 return Promise.resolve(annotationResponse)
@@ -283,8 +290,8 @@ export class AnnotationService
         return Promise.resolve(this.#currentError!)
     }
 
-    async #request(endpoint: string, method: 'GET'|'POST'='GET', parameters={})
-    //=========================================================================
+    async #request(userApiKey: string, endpoint: string, method: 'GET'|'POST'='GET', parameters={})
+    //=============================================================================================
     {
         let noResponse = true
         const abortController = new AbortController()
@@ -302,7 +309,6 @@ export class AnnotationService
             signal: abortController.signal
         }
         let url = `${this.#serverEndpoint}/${endpoint}`
-        const userApiKey = <string>Cookies.get('user-token') || ''
         const sessionKey = <string>Cookies.get('annotation-key') || ''
         if (method === 'GET') {
             const params = []
