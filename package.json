@@ -1,6 +1,6 @@
 {
   "name": "@abi-software/sparc-annotation",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "An annotation interface for the SPARC portal",
   "repository": {
     "type": "git",
