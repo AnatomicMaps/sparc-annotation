@@ -32,7 +32,7 @@ export interface MapFeature
         type: string
         coordinates: any[]
     }
-    properties: Record<any, any>
+    properties: Record<string, any>
 }
 
 /**
@@ -63,17 +63,36 @@ export interface Annotation extends AnnotationRequest
 
 //==============================================================================
 
+export interface AnnotationResponse extends Annotation
+{
+    annotationID: number
+}
+
+export interface ItemListResponse
+{
+    resource: string,
+    items: string[]
+}
+
+export interface FeatureListResponse
+{
+    resource: string,
+    features: MapFeature[]
+}
+
+//==============================================================================
+
 /**
- * Information about an error result.
+ * Information about an error response.
  */
-export interface ErrorResult {
+export interface ErrorResponse {
     error: string
 }
 
 /**
- * Information about an successful result.
+ * Information about an successful response.
  */
-export interface SuccessResult {
+export interface SuccessResponse {
     success: string
 }
 
@@ -99,8 +118,8 @@ const SERVER_TIMEOUT = 10000    //  10 seconds
 export class AnnotationService
 {
     #serverEndpoint: string;
-    #currentError: ErrorResult|null = null
     #currentUser: UserData|null = null
+    #currentError: ErrorResponse|null = null
 
     /**
      * @param  serverEndpoint  The URL of a map annotation service.
@@ -140,8 +159,8 @@ export class AnnotationService
      * @return  A Promise resolving to either data about a valid user
      *          or a reason why the user is invalid.
      */
-    async authenticate(userApiKey: string): Promise<UserData|ErrorResult>
-    //===================================================================
+    async authenticate(userApiKey: string): Promise<UserData|ErrorResponse>
+    //=====================================================================
     {
         this.#currentError = null
         this.#currentUser = null
@@ -159,16 +178,16 @@ export class AnnotationService
      * Unauthenticate with the annotation service.
      *
      * @param  userApiKey  The Api token of the logged-in Pennsieve user
-     * @return  A Promise with data about the call.
+     * @return A Promise with data about the call.
      */
-    async unauthenticate(userApiKey: string): Promise<SuccessResult|ErrorResult>
-    //==========================================================================
+    async unauthenticate(userApiKey: string): Promise<SuccessResponse|ErrorResponse>
+    //==============================================================================
     {
         this.#currentError = null
         this.#currentUser = null
-        const resultData = await this.#request(userApiKey, 'unauthenticate')
-        if ('success' in resultData) {
-            return Promise.resolve(resultData)
+        const responseData = await this.#request(userApiKey, 'unauthenticate')
+        if ('success' in responseData) {
+            return Promise.resolve(responseData)
         }
         return Promise.resolve(this.#currentError!)
      }
@@ -182,8 +201,8 @@ export class AnnotationService
      *                     identifiers of annotated items or a reason
      *                     why identifiers couldn't be retrieved.
      */
-    async annotatedItemIds(userApiKey: string, resourceId: string): Promise<string[]|ErrorResult>
-    //===========================================================================================
+    async annotatedItemIds(userApiKey: string, resourceId: string): Promise<ItemListResponse|ErrorResponse>
+    //=====================================================================================================
     {
         const itemIds = await this.#request(userApiKey, 'items/', 'GET', {
             resource: resourceId
@@ -203,8 +222,8 @@ export class AnnotationService
      *                     features drawn on the resource or a reason why
      *                     features couldn't be retrieved.
      */
-    async drawnFeatures(userApiKey: string, resourceId: string): Promise<MapFeature[]|ErrorResult>
-    //============================================================================================
+    async drawnFeatures(userApiKey: string, resourceId: string): Promise<FeatureListResponse[]|ErrorResponse>
+    //=======================================================================================================
     {
         const features = await this.#request(userApiKey, 'features/', 'GET', {
             resource: resourceId
@@ -225,8 +244,8 @@ export class AnnotationService
      *                     annotations about the item or a reason
      *                     why annotations couldn't be retrieved.
      */
-    async itemAnnotations(userApiKey: string, resourceId: string, ItemId: string): Promise<Annotation[]|ErrorResult>
-    //==============================================================================================================
+    async itemAnnotations(userApiKey: string, resourceId: string, ItemId: string): Promise<AnnotationResponse[]|ErrorResponse>
+    //========================================================================================================================
     {
         const annotations = await this.#request(userApiKey, 'annotations/', 'GET', {
             resource: resourceId,
@@ -247,8 +266,8 @@ export class AnnotationService
      *                       with the given URI or a reason why the
      *                       annotation couldn't be retrieved.
      */
-    async annotation(userApiKey: string, annotationId: URL): Promise<Annotation|ErrorResult>
-    //======================================================================================
+    async annotation(userApiKey: string, annotationId: URL): Promise<AnnotationResponse|ErrorResponse>
+    //================================================================================================
     {
         const annotation = await this.#request(userApiKey, 'annotation/', 'GET', {
             annotation: annotationId
@@ -268,8 +287,8 @@ export class AnnotationService
      *                      full annotation or a reason why the
      *                      annotation couldn't be added
      */
-    async addAnnotation(userApiKey: string, userAnnotation: UserAnnotation): Promise<Annotation|ErrorResult>
-    //======================================================================================================
+    async addAnnotation(userApiKey: string, userAnnotation: UserAnnotation): Promise<AnnotationResponse|ErrorResponse>
+    //================================================================================================================
     {
         if (this.#currentUser && this.#currentUser.canUpdate) {
             const annotationRequest: AnnotationRequest = Object.assign({
