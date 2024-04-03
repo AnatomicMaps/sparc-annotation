@@ -42,11 +42,9 @@ export interface UserAnnotation
 {
     resource: string
     item: string
-    evidence: URL[]
-    comment: string
+    body: Record<string, any>,
     feature?: MapFeature
 }
-
 
 interface AnnotationRequest extends UserAnnotation
 {
