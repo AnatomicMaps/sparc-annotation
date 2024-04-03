@@ -195,18 +195,31 @@ export class AnnotationService
     /**
      * Get identifiers of all annotated items in a resource.
      *
-     * @param  userApiKey  The Api token of the logged-in Pennsieve user
-     * @param  resourceId  The resource's identifier
-     * @return             A Promise resolving to either a list of
-     *                     identifiers of annotated items or a reason
-     *                     why identifiers couldn't be retrieved.
+     * @param  userApiKey    The Api token of the logged-in Pennsieve user
+     * @param  resourceId    The resource's identifier
+     * @param  userId        A user identifier (ORCID). Optional
+     * @param  participated  Get items the user was involved in annotating or not.
+     *                       Optional, default ``true``
+     * @return A Promise resolving to either a list of identifiers of annotated
+     *         items or a reason why identifiers couldn't be retrieved.
      */
-    async annotatedItemIds(userApiKey: string, resourceId: string): Promise<ItemListResponse|ErrorResponse>
-    //=====================================================================================================
+    async annotatedItemIds(userApiKey: string, resourceId: string, userId?: string, participated?: boolean): Promise<ItemListResponse|ErrorResponse>
+    //==============================================================================================================================================
     {
-        const itemIds = await this.#request(userApiKey, 'items/', 'GET', {
+        const params: {
+            resource: string,
+            user?: string,
+            participated?: boolean
+        } = {
             resource: resourceId
-        })
+        }
+        if (userId !== undefined) {
+            params.user = userId
+        }
+        if (participated !== undefined) {
+            params.participated = participated
+        }
+        const itemIds = await this.#request(userApiKey, 'items/', 'GET', params)
         if (!('error' in itemIds)) {
             return Promise.resolve(itemIds)
         }
