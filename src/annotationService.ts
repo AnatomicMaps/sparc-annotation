@@ -235,12 +235,19 @@ export class AnnotationService
      *                     features drawn on the resource or a reason why
      *                     features couldn't be retrieved.
      */
-    async drawnFeatures(userApiKey: string, resourceId: string): Promise<FeatureListResponse[]|ErrorResponse>
-    //=======================================================================================================
+    async drawnFeatures(userApiKey: string, resourceId: string, itemIds?: string|[string]): Promise<FeatureListResponse[]|ErrorResponse>
+    //==================================================================================================================================
     {
-        const features = await this.#request(userApiKey, 'features/', 'GET', {
+        const params: {
+            resource: string,
+            items?: string|[string]
+        } = {
             resource: resourceId
-        })
+        }
+        if (itemIds !== undefined) {
+            params.items = itemIds
+        }
+        const features = await this.#request(userApiKey, 'features/', 'GET', params)
         if (!('error' in features)) {
             return Promise.resolve(features)
         }
