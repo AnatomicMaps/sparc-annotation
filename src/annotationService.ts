@@ -65,7 +65,7 @@ export interface Annotation extends AnnotationRequest
 
 export interface AnnotationResponse extends Annotation
 {
-    annotationID: number
+    annotationID: string
 }
 
 export interface ItemListResponse
